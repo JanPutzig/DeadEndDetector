@@ -23,6 +23,7 @@ struct Vertex
 		neighbors = vector<int>(0);
 	}
 
+	//standard constructor, sets id to -1 as potential flag
 	Vertex()
 	{
 		id = -1;
@@ -30,11 +31,16 @@ struct Vertex
 	}
 };
 
+//the entire graph where id is the position of a vertex in the vector
 typedef vector<Vertex> Graph;
+
+//container of subgraphs, using ids as key
 typedef map<int, Vertex> Subgraph;
+
+//positions of dead-end signs as (entry, exit) pair
 typedef std::pair<int, int> Sign;
 
-
+//constructs graph from filepath
 Graph readFile(std::string file)
 {
 	//initialize file_reader
@@ -74,6 +80,7 @@ Graph readFile(std::string file)
 bool trim(Subgraph& g, Subgraph::iterator& it)
 {
 	int id = it->first;
+
 	//check if vertex is a leaf
 	if (g[id].neighbors.size() == 1)
 	{
@@ -114,20 +121,20 @@ int main() {
 	std::string file;
 	std::cin >> file;
 
-	//generate Graph
+	//generate graph
 	Graph complete = readFile(file);
 
-	//initialize corresponding vector of flags
+	//initialize vector of flags and result
 	vector<char> visited = vector<char>(complete.size(),false);
-
-	//initialize result as empty
 	std::list<Sign> result = std::list<Sign>();
 
+	//lowest possible id where visited flag has not been set
 	int minimum_id = 0;
+
 	//while unprocessed vertices remain
 	while(minimum_id < complete.size())
 	{
-		//initialize empty subgraph, and tree flag
+		//initialize empty subgraph and tree flag
 		Subgraph g = Subgraph();
 		bool tree = true;
 
@@ -146,7 +153,7 @@ int main() {
 			break;
 		}
 
-		//add next unprocessed vertex to g
+		//add next unprocessed vertex to new subgraph
 		int root = minimum_id++;
 		g[root] = complete[root];
 		visited[root] = true;
@@ -199,33 +206,37 @@ int main() {
 		from a vertex in a cycle or on a path connecting two cycles
 		to a vertex for which neither is true
 		
-		to identify these, repeatedly remove all leaves from the component, until no leaves remain
-		then any street leading from a vertex in the remainder outside of the remainder receives a sign
+		to identify these, remove all leaves from the component and all vertices that thereby become leaves
+		until the trimmed version contains no leaves
+		then any street leading from a vertex in the remainder to a vertex outside of the remainder receives a sign
 		*/
 		else
 		{
+			//create copy of subgraph
 			Subgraph trimmedG = g;
+
 			for (Subgraph::iterator it = trimmedG.begin(); it != trimmedG.end();)
 			{
-				//remove leaves/trees hanging off
+				//remove leaves/trees hanging off the main body
 				if (!trim(trimmedG, it))
 				{
 					it++;
 				}
 			}
-			//add all pairs of remaining nodes with removed neighbors to the result
+
+			//search for sign positions
 			for (Subgraph::iterator it = g.begin(); it != g.end(); it++)
 			{
-				//if it points to a vertex outside tmpG
+				//if it points to a vertex outside trimmedG
 				if (trimmedG.find(it->first) == trimmedG.end())
 				{
-					//search its neighbors
+					//search the neighbors
 					for (vector<int>::iterator findIt = it->second.neighbors.begin(); findIt != it->second.neighbors.end(); findIt++)
 					{
-						//for a vertex in tmpG
+						//for a vertex in trimmedG
 						if (trimmedG.find(*findIt) != trimmedG.end())
 						{
-							//add a Sign at the end inside the trimmed Graph
+							//add a sign at the end inside the trimmed Graph
 							result.push_back(Sign(*findIt, it->first));
 						}
 					}
@@ -233,8 +244,10 @@ int main() {
 			}
 		}
 	}
+
 	//sort result according to specifications
 	result.sort(lexiComp);
+
 	//output result
 	int k = result.size();
 	std::cout << k << "\n";
@@ -243,5 +256,6 @@ int main() {
 		std::cout << result.front().first+1 << " " << result.front().second+1 << "\n";
 		result.pop_front();
 	}
+
 	return 0;
 }
